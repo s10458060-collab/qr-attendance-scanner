@@ -1,7 +1,6 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8j39VBNRe3BdFbykiZBDzqtHxJN6TMqVdgFTX1p3nR_-XJAba-NUpj6uWFHQCVixS/exec";
 const API_KEY = "SUPER_SECRET_API_KEY_12345"; // Must match Code.gs API_KEY
 
-// Helper to Hash Passwords locally before transmission
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -20,6 +19,10 @@ async function searchStudentsApi(data) {
 
 async function markAttendance(data) {
   return sendSecureRequest('markAttendance', data);
+}
+
+async function registerStudentApi(data) {
+  return sendSecureRequest('registerStudent', data);
 }
 
 async function sendSecureRequest(action, data) {
