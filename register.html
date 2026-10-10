@@ -9,11 +9,11 @@
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
-  <!-- LOGIN SECTION -->
+  <!-- LOGIN CARD -->
   <div id="loginCard" class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-4">
     <div class="text-center">
       <h1 class="text-2xl font-bold text-slate-800">System Login</h1>
-      <p class="text-xs text-slate-500 mt-1">Authenticate to access Attendance Portal</p>
+      <p class="text-xs text-slate-500 mt-1">Authenticate to access Registration Portal</p>
     </div>
 
     <div class="space-y-3 pt-2">
@@ -32,7 +32,7 @@
     <p id="loginError" class="text-xs text-red-500 text-center hidden"></p>
   </div>
 
-  <!-- MAIN APP SECTION -->
+  <!-- REGISTRATION SECTION -->
   <div id="appSection" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4 my-2">
     <div class="flex justify-between items-center border-b pb-3">
       <div>
@@ -49,7 +49,6 @@
       <a href="register.html" class="py-2.5 rounded-lg text-white bg-indigo-600">New Reg</a>
     </nav>
 
-    <!-- Registration Form -->
     <form id="regForm" onsubmit="handleRegistration(event)" class="space-y-3">
       <div class="grid grid-cols-2 gap-2">
         <div>
@@ -65,16 +64,8 @@
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Class *</label>
-          <!-- Class Dropdown List -->
           <select id="regClass" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
-            <option value="" disabled selected>Select class...</option>
-            <option value="Below 4">Below 4</option>
-            <option value="Part 1a">Part 1a</option>
-            <option value="Part 1b">Part 1b</option>
-            <option value="Part 2">Part 2</option>
-            <option value="Part 3">Part 3</option>
-            <option value="Part 4">Part 4</option>
-            <option value="Part 6">Part 6</option>
+            <option value="" disabled selected>Loading classes...</option>
           </select>
         </div>
         <div>
@@ -99,7 +90,7 @@
         </div>
       </div>
 
-      <p class="text-[11px] text-slate-400 text-center italic mt-1">Student ID will be generated automatically upon saving.</p>
+      <p class="text-[11px] text-slate-400 text-center italic mt-1">Unique Student ID (STU000) generated automatically.</p>
 
       <button type="submit" id="btnRegister" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md text-sm mt-2">
         Register & Save to Sheet
@@ -136,10 +127,31 @@
       }
     }
 
-    function showAppUI(role) {
+    async function showAppUI(role) {
       document.getElementById('loginCard').classList.add('hidden');
       document.getElementById('appSection').classList.remove('hidden');
       document.getElementById('userRoleBadge').innerText = `Session: ${role}`;
+      await loadClassDropdown();
+    }
+
+    async function loadClassDropdown() {
+      const classSelect = document.getElementById('regClass');
+      try {
+        const res = await getValidClassesApi();
+        if (res.success && res.classes && res.classes.length > 0) {
+          classSelect.innerHTML = '<option value="" disabled selected>Select class...</option>';
+          res.classes.forEach(cls => {
+            const opt = document.createElement('option');
+            opt.value = cls;
+            opt.innerText = cls;
+            classSelect.appendChild(opt);
+          });
+        } else {
+          classSelect.innerHTML = '<option value="" disabled selected>No class tabs found</option>';
+        }
+      } catch (err) {
+        classSelect.innerHTML = '<option value="" disabled selected>Error loading classes</option>';
+      }
     }
 
     function logout() {
@@ -148,61 +160,45 @@
     }
 
     async function handleRegistration(e) {
-  e.preventDefault();
-  
-  // Gather values
-  const studentData = {
-    firstName: document.getElementById('regFirst').value.trim(),
-    lastName: document.getElementById('regLast').value.trim(),
-    className: document.getElementById('regClass').value,
-    dob: document.getElementById('regDob').value,
-    parentName: document.getElementById('regParentName').value.trim(),
-    parentPhone: document.getElementById('regParentPhone').value.trim(),
-    email: document.getElementById('regEmail').value.trim()
-  };
+      e.preventDefault();
+      const btn = document.getElementById('btnRegister');
+      btn.disabled = true;
+      btn.innerText = "Registering...";
+      showAlert("Generating unique ID & saving...", "blue");
 
-  // DEBUG: Check what is empty in the console
-  console.log("Submitting Student Data:", studentData);
+      const studentData = {
+        firstName: document.getElementById('regFirst').value.trim(),
+        lastName: document.getElementById('regLast').value.trim(),
+        className: document.getElementById('regClass').value,
+        dob: document.getElementById('regDob').value,
+        parentName: document.getElementById('regParentName').value.trim(),
+        parentPhone: document.getElementById('regParentPhone').value.trim(),
+        email: document.getElementById('regEmail').value.trim()
+      };
 
-  // Frontend validation check
-  if (!studentData.firstName || !studentData.lastName || !studentData.className || !studentData.dob || !studentData.parentName || !studentData.parentPhone || !studentData.email) {
-    showAlert("Please ensure all required fields are filled out.", "red");
-    return;
-  }
+      try {
+        const res = await registerStudentApi(studentData);
+        showAlert(res.message, res.success ? "green" : "red");
 
-  const btn = document.getElementById('btnRegister');
-  btn.disabled = true;
-  btn.innerText = "Registering...";
-  showAlert("Generating ID & saving student...", "blue");
-
-  try {
-    const res = await registerStudentApi(studentData);
-    showAlert(res.message, res.success ? "green" : "red");
-
-    if (res.success) {
-      sessionStorage.removeItem('studentRosterData'); 
-      document.getElementById('regForm').reset();
+        if (res.success) {
+          sessionStorage.clear(); // Clear cached data
+          document.getElementById('regForm').reset();
+          await loadClassDropdown();
+        }
+      } catch (err) {
+        showAlert("Failed to connect to backend", "red");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Register & Save to Sheet";
+      }
     }
-  } catch (err) {
-    showAlert("Failed to connect to backend", "red");
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Register & Save to Sheet";
-  }
-}
+
     function showAlert(msg, type) {
       const banner = document.getElementById('alertBanner');
-      if (type === "hide") {
-        banner.classList.add('hidden');
-        return;
-      }
-
       banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
-
       if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
       if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
       if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
-
       banner.innerText = msg;
     }
   </script>
