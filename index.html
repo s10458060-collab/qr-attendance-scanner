@@ -6,7 +6,7 @@
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
-  <script src="api-config.js?v=100"></script>
+  <script src="api-config.js?v=101"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -217,12 +217,15 @@
 
       video.srcObject = videoStream;
       
-      // Wait for metadata to load so dimensions are fully initialized
       video.onloadedmetadata = () => {
-        video.play();
-        scanningActive = true;
-        document.getElementById('cameraStatus').innerText = "Scanning active...";
-        requestAnimationFrame(scanFrame);
+        video.play().then(() => {
+          scanningActive = true;
+          document.getElementById('cameraStatus').innerText = "Scanning active...";
+          requestAnimationFrame(scanFrame);
+        }).catch(err => {
+          console.error("Video play error:", err);
+          document.getElementById('cameraStatus').innerText = "Tap screen to enable camera feed.";
+        });
       };
     }
 
@@ -241,7 +244,8 @@
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0 && video.videoHeight > 0) {
+      // Use >= HAVE_CURRENT_DATA (2) instead of strict HAVE_ENOUGH_DATA (4) for mobile compatibility
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
         if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
@@ -251,16 +255,20 @@
         
         try {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, canvas.width, canvas.height);
+          
+          // Configure jsQR with inversionAttempts for maximum scan success rate
+          const code = jsQR(imageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "attemptBoth"
+          });
 
           if (code && code.data) {
-            console.log("QR Code detected:", code.data);
+            console.log("QR Code detected successfully:", code.data);
             scanningActive = false;
             fetchStudentFast(code.data.trim());
             return;
           }
         } catch (err) {
-          // Suppress tainted canvas frames during fast mounts
+          // Suppress tainted canvas frame errors during fast mounts
         }
       }
       
