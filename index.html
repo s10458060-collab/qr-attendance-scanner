@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
   <script src="api-config.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
@@ -88,38 +88,38 @@
     let isCacheLoaded = false;
 
     /**
- * Returns the exact color for a given class name based on your category rules.
- * @param {string} className 
- * @returns {string} Hex or color name
- */
-function getClassColor(className) {
-  if (!className) return '#202124'; // Default text color
-  
-  const name = className.trim().toLowerCase();
+     * Returns the exact color for a given class name based on your category rules.
+     * @param {string} className 
+     * @returns {string} Hex or color name
+     */
+    function getClassColor(className) {
+      if (!className) return '#202124'; // Default text color
+      
+      const name = className.trim().toLowerCase();
 
-  if (name.includes('below 4')) {
-    return '#1a73e8'; // Blue
-  } else if (name.includes('part 1b') || (name.includes('7+'))) {
-    return '#ff69b4'; // Pink (Hot Pink)
-  } else if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
-    return '#d93025'; // Red
-  } else if (name.includes('part 1c') || name.includes('12+')) {
-    return '#000000'; // Black
-  } else if (name.includes('part 2')) {
-    return '#ff8c00'; // Orange
-  } else if (name.includes('part 3')) {
-    return '#800080'; // Purple
-  } else if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
-    return '#0d652d'; // Green
-  } else if (name.includes('part 6')) {
-    return '#fbbc04'; // Yellow (Gold/Yellow)
-  } else if (name.includes('pronounciation') || name.includes('pronunciation')) {
-    return '#8b4513'; // Brown (SaddleBrown)
-  }
-  
-  return '#5f6368'; // Default fallback gray if no match
-}
-
+      if (name.includes('below 4')) {
+        return '#1a73e8'; // Blue
+      } else if (name.includes('part 1b') || (name.includes('7+'))) {
+        return '#ff69b4'; // Pink (Hot Pink)
+      } else if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
+        return '#d93025'; // Red
+      } else if (name.includes('part 1c') || name.includes('12+')) {
+        return '#000000'; // Black
+      } else if (name.includes('part 2')) {
+        return '#ff8c00'; // Orange
+      } else if (name.includes('part 3')) {
+        return '#800080'; // Purple
+      } else if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
+        return '#0d652d'; // Green
+      } else if (name.includes('part 6')) {
+        return '#fbbc04'; // Yellow (Gold/Yellow)
+      } else if (name.includes('pronounciation') || name.includes('pronunciation')) {
+        return '#8b4513'; // Brown (SaddleBrown)
+      }
+      
+      return '#5f6368'; // Default fallback gray if no match
+    }
+      
     window.addEventListener('DOMContentLoaded', () => {
       const sessionRole = sessionStorage.getItem('userRole');
       if (sessionRole) {
