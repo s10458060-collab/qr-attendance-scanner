@@ -72,8 +72,14 @@
       box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
     }
 
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
     button {
-      width: 100%;
+      flex: 1;
       padding: 12px;
       border: none;
       border-radius: 6px;
@@ -81,7 +87,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: background-color 0.2s;
-      margin-top: 10px;
     }
 
     #submitBtn {
@@ -164,16 +169,18 @@
 
       <div class="form-group">
         <label for="parentPhone">Parent Phone / WhatsApp</label>
-        <input type="tel" id="parentPhone" placeholder="e.g., +1234567890">
+        <input type="text" id="parentPhone" placeholder="123-456-7890" maxlength="12">
       </div>
 
       <div class="form-group">
         <label for="parentEmail">Parent Email</label>
-        <input type="email" id="parentEmail" placeholder="e.g., parent@example.com">
+        <input type="email" id="parentEmail" placeholder="parent@example.com">
       </div>
 
-      <button type="submit" id="submitBtn">Register Student</button>
-      <button type="button" id="cancelBtn">Cancel / Back to Home</button>
+      <div class="button-group">
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="submit" id="submitBtn">Register</button>
+      </div>
     </form>
 
     <div id="message"></div>
@@ -188,7 +195,26 @@
     const submitBtn = document.getElementById('submitBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const classSelect = document.getElementById('classSelect');
+    const phoneInput = document.getElementById('parentPhone');
+    const emailInput = document.getElementById('parentEmail');
     const messageDiv = document.getElementById('message');
+
+    // Auto-format phone number as 111-111-1111
+    phoneInput.addEventListener('input', function(e) {
+      let cleaned = e.target.value.replace(/\D/g, '');
+      cleaned = cleaned.substring(0, 10);
+      
+      let formatted = '';
+      if (cleaned.length > 6) {
+        formatted = `${cleaned.substring(0, 3)}-${cleaned.substring(3, 6)}-${cleaned.substring(6)}`;
+      } else if (cleaned.length > 3) {
+        formatted = `${cleaned.substring(0, 3)}-${cleaned.substring(3)}`;
+      } else {
+        formatted = cleaned;
+      }
+      
+      e.target.value = formatted;
+    });
 
     // Cancel Button navigation back to index.html
     cancelBtn.addEventListener('click', function() {
@@ -233,8 +259,8 @@
       const className = classSelect.value;
       const dob = document.getElementById('dob').value;
       const parentName = document.getElementById('parentName').value.trim();
-      const parentPhone = document.getElementById('parentPhone').value.trim();
-      const parentEmail = document.getElementById('parentEmail').value.trim();
+      const parentPhone = phoneInput.value.trim();
+      const parentEmail = emailInput.value.trim();
 
       if (!className) {
         showStatus("Please select a class.", "error");
@@ -273,7 +299,7 @@
         showStatus("Registration Error: " + err.toString(), "error");
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Register Student";
+        submitBtn.textContent = "Register";
       }
     });
 
