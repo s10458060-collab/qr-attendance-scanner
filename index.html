@@ -121,12 +121,15 @@
     }
       
     window.addEventListener('DOMContentLoaded', () => {
-      const sessionRole = sessionStorage.getItem('userRole');
-      if (sessionRole) {
-        showAppUI(sessionRole);
-      }
-    });
+  // Preload roster immediately in the background so it's ready instantly upon login
+  preloadStudentRoster();
 
+  const sessionRole = sessionStorage.getItem('userRole');
+  if (sessionRole) {
+    showAppUI(sessionRole);
+  }
+});
+    
     async function preloadStudentRoster() {
       document.getElementById('cameraStatus').innerText = "Syncing student roster...";
       try {
@@ -207,30 +210,39 @@
       }
     }
 
-    function scanFrame() {
-      if (!scanningActive) return;
-      
-      const video = document.getElementById('qr-video');
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
+  let frameCount = 0;
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
+  function scanFrame() {
+  if (!scanningActive) return;
+  
+  frameCount++;
+  // Throttle to process every 3rd frame (~20fps), drastically reducing CPU load on phones
+  if (frameCount % 3 !== 0) {
+    requestAnimationFrame(scanFrame);
+    return;
+  }
 
-        if (code && code.data) {
-          scanningActive = false;
-          fetchStudentFast(code.data.trim());
-          return;
-        }
-      }
-      requestAnimationFrame(scanFrame);
+  const video = document.getElementById('qr-video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if (code && code.data) {
+      scanningActive = false;
+      fetchStudentFast(code.data.trim());
+      return;
     }
-
+  }
+  requestAnimationFrame(scanFrame);
+}
+    
     async function fetchStudentFast(scannedId) {
       const cleanId = String(scannedId).trim().toUpperCase();
 
