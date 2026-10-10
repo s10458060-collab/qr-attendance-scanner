@@ -6,8 +6,7 @@
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
-  <!-- Cache-buster parameter added -->
-  <script src="api-config.js?v=99"></script>
+  <script src="api-config.js?v=100"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -82,23 +81,17 @@
   </div>
 
   <script>
-    // Version 99 Confirmation
-    console.log("LOADED LATEST CODE VERSION 99 - PART 1C FIXED");
-
     let videoStream = null;
     let scanningActive = false;
     let activeStudent = null;
     let studentCache = {};
     let isCacheLoaded = false;
 
-    // Robust color mapping with diagnostic logging
+    // Robust color mapping matching your exact rules
     function getClassColor(className) {
       if (!className) return '#5f6368';
       
-      console.log("RAW className from sheet:", JSON.stringify(className));
-      
       const name = String(className).toLowerCase().replace(/[^a-z0-9\+\-\s]/g, '').trim();
-      console.log("CLEANED className for matching:", name);
 
       if (name.includes('1c') || name.includes('12+') || name.includes('part 1 c')) {
         return '#000000'; // Black
@@ -207,7 +200,11 @@
       
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { ideal: "environment" } } 
+          video: { 
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
         });
       } catch (e) {
         try {
@@ -219,9 +216,14 @@
       }
 
       video.srcObject = videoStream;
-      video.play();
-      scanningActive = true;
-      requestAnimationFrame(scanFrame);
+      
+      // Wait for metadata to load so dimensions are fully initialized
+      video.onloadedmetadata = () => {
+        video.play();
+        scanningActive = true;
+        document.getElementById('cameraStatus').innerText = "Scanning active...";
+        requestAnimationFrame(scanFrame);
+      };
     }
 
     function stopCamera() {
@@ -239,10 +241,126 @@
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
+      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0 && video.videoHeight > 0) {
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+        
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width
+        try {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+          if (code && code.data) {
+            console.log("QR Code detected:", code.data);
+            scanningActive = false;
+            fetchStudentFast(code.data.trim());
+            return;
+          }
+        } catch (err) {
+          // Suppress tainted canvas frames during fast mounts
+        }
+      }
+      
+      requestAnimationFrame(scanFrame);
+    }
+
+    async function fetchStudentFast(scannedId) {
+      const cleanId = String(scannedId).trim().toUpperCase();
+
+      if (isCacheLoaded && studentCache[cleanId]) {
+        activeStudent = studentCache[cleanId];
+        applyStudentCardTheme(activeStudent);
+        showAlert("", "hide");
+        return;
+      }
+
+      showAlert("Searching student...", "blue");
+      try {
+        const res = await searchStudentsApi({ id: cleanId });
+        
+        if (!res.success || !res.students || res.students.length === 0) {
+          showAlert(res.message || "Student not found.", "red");
+          setTimeout(() => { scanningActive = true; scanFrame(); }, 1500);
+          return;
+        }
+
+        activeStudent = res.students[0];
+        applyStudentCardTheme(activeStudent);
+        showAlert("", "hide");
+      } catch (err) {
+        showAlert("Connection error while fetching student details.", "red");
+        setTimeout(() => { scanningActive = true; scanFrame(); }, 1500);
+      }
+    }
+
+    function applyStudentCardTheme(student) {
+      const card = document.getElementById('resultCard');
+      const className = student.className || student.class || 'Class';
+      const hexColor = getClassColor(className);
+
+      document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
+      document.getElementById('cardId').innerText = `ID: ${student.id}`;
+      document.getElementById('cardClassText').innerText = className;
+
+      const badge = document.getElementById('cardClassBadge');
+      badge.innerText = className;
+      
+      badge.style.setProperty('background-color', hexColor, 'important');
+      badge.style.setProperty('color', hexColor === '#fbbc04' ? '#000000' : '#ffffff', 'important');
+
+      card.style.backgroundColor = hexToRgba(hexColor, 0.12);
+      card.style.borderColor = hexColor;
+      card.classList.remove('hidden');
+    }
+
+    async function handleMarkPresent() {
+      if (!activeStudent) return;
+      showAlert("Marking attendance...", "blue");
+
+      try {
+        const res = await markAttendance(activeStudent);
+        showAlert(res.message, res.success ? "green" : "red");
+        
+        if (res.success) {
+          document.getElementById('resultCard').classList.add('hidden');
+          setTimeout(() => { 
+            showAlert("", "hide");
+            scanningActive = true; 
+            scanFrame(); 
+          }, 400);
+        }
+      } catch (e) {
+        showAlert("Failed to mark attendance", "red");
+      }
+    }
+
+    function handleCancelScan() {
+      activeStudent = null;
+      document.getElementById('resultCard').classList.add('hidden');
+      showAlert("", "hide");
+      scanningActive = true;
+      scanFrame();
+      document.getElementById('cameraStatus').innerText = "Scanning active...";
+    }
+
+    function showAlert(msg, type) {
+      const banner = document.getElementById('alertBanner');
+      if (type === "hide") {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
+
+      if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
+      if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
+      if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
+
+      banner.innerText = msg;
+    }
+  </script>
+</body>
+</html>
