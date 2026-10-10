@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Use robust official html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <script src="api-config.js?v=300"></script>
+  <script src="api-config.js?v=400"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -49,12 +48,11 @@
 
     <!-- Scan View Content -->
     <div class="space-y-3">
-      <!-- html5-qrcode mounts its internal video reader right inside this container div -->
       <div id="reader" class="w-full aspect-square bg-black rounded-xl overflow-hidden"></div>
       <p id="cameraStatus" class="text-xs text-center text-slate-400">Initializing camera scanner...</p>
     </div>
 
-    <!-- Student Details Result Card -->
+    <!-- Student Details Result Card (Auto-Dismissing Kiosk Mode) -->
     <div id="resultCard" class="hidden border-2 rounded-2xl p-5 space-y-3 transition-all duration-300">
       <div class="flex justify-between items-center">
         <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm">Class</span>
@@ -64,16 +62,7 @@
         <h3 id="cardName" class="text-xl font-extrabold text-slate-900">First Last</h3>
         <p id="cardClassText" class="text-xs font-semibold opacity-80 mt-0.5">Class Name</p>
       </div>
-      
-      <!-- Action Buttons -->
-      <div class="grid grid-cols-2 gap-2 pt-1">
-        <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition shadow-md">
-          Mark Present
-        </button>
-        <button id="btnCancelScan" onclick="handleCancelScan()" class="w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">
-          Cancel
-        </button>
-      </div>
+      <p class="text-center text-xs font-bold text-emerald-600 pt-1">Attendance Logged Automatically ✓</p>
     </div>
 
     <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
@@ -81,9 +70,9 @@
 
   <script>
     let html5QrCode = null;
-    let activeStudent = null;
     let studentCache = {};
     let isCacheLoaded = false;
+    let isProcessingScan = false;
 
     function getClassColor(className) {
       if (!className) return '#5f6368';
@@ -176,13 +165,12 @@
           { facingMode: "environment" }, 
           config, 
           onScanSuccess, 
-          onScanFailure
+          () => {}
         );
         document.getElementById('cameraStatus').innerText = "Scanning active...";
       } catch (err) {
-        console.error("Camera start error, falling back to any camera:", err);
         try {
-          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure);
+          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, () => {});
           document.getElementById('cameraStatus').innerText = "Scanning active...";
         } catch (innerErr) {
           document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
@@ -194,60 +182,67 @@
       if (html5QrCode && html5QrCode.isScanning) {
         try {
           await html5QrCode.stop();
-        } catch (e) {
-          console.error("Stop camera error:", e);
-        }
+        } catch (e) {}
       }
     }
 
     function onScanSuccess(decodedText, decodedResult) {
-      console.log(`QR Code matched = ${decodedText}`, decodedResult);
+      if (isProcessingScan) return;
+      isProcessingScan = true;
+
+      console.log(`QR Code matched = ${decodedText}`);
       
-      // Pause or stop scanning immediately upon successful match
-      html5QrCode.pause();
-      document.getElementById('cameraStatus').innerText = "QR Code detected!";
-      fetchStudentFast(decodedText.trim());
+      if (html5QrCode) html5QrCode.pause();
+      document.getElementById('cameraStatus').innerText = "Processing attendance...";
+      
+      fetchAndAutoMark(decodedText.trim());
     }
 
-    function onScanFailure(error) {
-      // Frame scan failures happen continuously while searching — suppress them silently
-    }
-
-    async function fetchStudentFast(scannedId) {
+    async function fetchAndAutoMark(scannedId) {
       const cleanId = String(scannedId).trim().toUpperCase();
+      let student = null;
 
       if (isCacheLoaded && studentCache[cleanId]) {
-        activeStudent = studentCache[cleanId];
-        applyStudentCardTheme(activeStudent);
-        showAlert("", "hide");
+        student = studentCache[cleanId];
+      } else {
+        try {
+          const res = await searchStudentsApi({ id: cleanId });
+          if (res.success && res.students && res.students.length > 0) {
+            student = res.students[0];
+          }
+        } catch (err) {
+          console.error("Student search failed:", err);
+        }
+      }
+
+      if (!student) {
+        showAlert("Student ID not found in roster.", "red");
+        setTimeout(() => {
+          showAlert("", "hide");
+          isProcessingScan = false;
+          if (html5QrCode) html5QrCode.resume();
+          document.getElementById('cameraStatus').innerText = "Scanning active...";
+        }, 1500);
         return;
       }
 
-      showAlert("Searching student...", "blue");
-      try {
-        const res = await searchStudentsApi({ id: cleanId });
-        
-        if (!res.success || !res.students || res.students.length === 0) {
-          showAlert(res.message || "Student not found.", "red");
-          setTimeout(() => { 
-            html5QrCode.resume(); 
-            showAlert("", "hide"); 
-            document.getElementById('cameraStatus').innerText = "Scanning active...";
-          }, 2000);
-          return;
-        }
+      // Display student details card
+      applyStudentCardTheme(student);
+      showAlert(`✓ Marked Present: ${student.firstName} ${student.lastName}`, "green");
 
-        activeStudent = res.students[0];
-        applyStudentCardTheme(activeStudent);
+      // Fire background attendance record
+      markAttendance(student).catch(err => {
+        console.error("Background attendance sync error:", err);
+      });
+
+      // Auto-dismiss card and resume scanning after 1.2 seconds
+      setTimeout(() => {
+        document.getElementById('resultCard').classList.add('hidden');
         showAlert("", "hide");
-      } catch (err) {
-        showAlert("Connection error while searching.", "red");
-        setTimeout(() => { 
-          html5QrCode.resume(); 
-          showAlert("", "hide"); 
-          document.getElementById('cameraStatus').innerText = "Scanning active...";
-        }, 2000);
-      }
+        isProcessingScan = false;
+        if (html5QrCode) html5QrCode.resume();
+        document.getElementById('cameraStatus').innerText = "Scanning active...";
+      }, 1200);
     }
 
     function applyStudentCardTheme(student) {
@@ -267,35 +262,6 @@
       card.style.backgroundColor = hexToRgba(hexColor, 0.12);
       card.style.borderColor = hexColor;
       card.classList.remove('hidden');
-    }
-
-    async function handleMarkPresent() {
-      if (!activeStudent) return;
-      showAlert("Marking attendance...", "blue");
-
-      try {
-        const res = await markAttendance(activeStudent);
-        showAlert(res.message, res.success ? "green" : "red");
-        
-        if (res.success) {
-          document.getElementById('resultCard').classList.add('hidden');
-          setTimeout(() => { 
-            showAlert("", "hide");
-            html5QrCode.resume();
-            document.getElementById('cameraStatus').innerText = "Scanning active...";
-          }, 800);
-        }
-      } catch (e) {
-        showAlert("Failed to mark attendance", "red");
-      }
-    }
-
-    function handleCancelScan() {
-      activeStudent = null;
-      document.getElementById('resultCard').classList.add('hidden');
-      showAlert("", "hide");
-      if (html5QrCode) html5QrCode.resume();
-      document.getElementById('cameraStatus').innerText = "Scanning active...";
     }
 
     function showAlert(msg, type) {
