@@ -289,11 +289,17 @@ function getClassColor(className) {
     }
 
     function hexToRgba(hex, alpha) {
-      const cleanHex = hex.replace('#', '');
-      const r = parseInt(cleanHex.substring(0, 2), 16) || 59;
-      const g = parseInt(cleanHex.substring(2, 4), 16) || 130;
-      const b = parseInt(cleanHex.substring(4, 6), 16) || 246;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      const cleanHex = (hex || '#5f6368').replace('#', '');
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+      
+      // Use isNaN instead of || so that 0 (black components) is preserved correctly
+      const finalR = isNaN(r) ? 95 : r;
+      const finalG = isNaN(g) ? 99 : g;
+      const finalB = isNaN(b) ? 104 : b;
+      
+      return `rgba(${finalR}, ${finalG}, ${finalB}, ${alpha})`;
     }
 
     async function handleMarkPresent() {
