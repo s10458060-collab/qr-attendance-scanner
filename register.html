@@ -148,38 +148,48 @@
     }
 
     async function handleRegistration(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnRegister');
-      btn.disabled = true;
-      btn.innerText = "Registering...";
-      showAlert("Generating ID & saving student...", "blue");
+  e.preventDefault();
+  
+  // Gather values
+  const studentData = {
+    firstName: document.getElementById('regFirst').value.trim(),
+    lastName: document.getElementById('regLast').value.trim(),
+    className: document.getElementById('regClass').value,
+    dob: document.getElementById('regDob').value,
+    parentName: document.getElementById('regParentName').value.trim(),
+    parentPhone: document.getElementById('regParentPhone').value.trim(),
+    email: document.getElementById('regEmail').value.trim()
+  };
 
-      const studentData = {
-        firstName: document.getElementById('regFirst').value.trim(),
-        lastName: document.getElementById('regLast').value.trim(),
-        className: document.getElementById('regClass').value, // Gets selected dropdown value
-        dob: document.getElementById('regDob').value,
-        parentName: document.getElementById('regParentName').value.trim(),
-        parentPhone: document.getElementById('regParentPhone').value.trim(),
-        email: document.getElementById('regEmail').value.trim()
-      };
+  // DEBUG: Check what is empty in the console
+  console.log("Submitting Student Data:", studentData);
 
-      try {
-        const res = await registerStudentApi(studentData);
-        showAlert(res.message, res.success ? "green" : "red");
+  // Frontend validation check
+  if (!studentData.firstName || !studentData.lastName || !studentData.className || !studentData.dob || !studentData.parentName || !studentData.parentPhone || !studentData.email) {
+    showAlert("Please ensure all required fields are filled out.", "red");
+    return;
+  }
 
-        if (res.success) {
-          sessionStorage.removeItem('studentRosterData'); // Clear cache so new student appears immediately across pages
-          document.getElementById('regForm').reset();
-        }
-      } catch (err) {
-        showAlert("Failed to connect to backend", "red");
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "Register & Save to Sheet";
-      }
+  const btn = document.getElementById('btnRegister');
+  btn.disabled = true;
+  btn.innerText = "Registering...";
+  showAlert("Generating ID & saving student...", "blue");
+
+  try {
+    const res = await registerStudentApi(studentData);
+    showAlert(res.message, res.success ? "green" : "red");
+
+    if (res.success) {
+      sessionStorage.removeItem('studentRosterData'); 
+      document.getElementById('regForm').reset();
     }
-
+  } catch (err) {
+    showAlert("Failed to connect to backend", "red");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Register & Save to Sheet";
+  }
+}
     function showAlert(msg, type) {
       const banner = document.getElementById('alertBanner');
       if (type === "hide") {
