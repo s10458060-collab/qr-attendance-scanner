@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.tailwindcss.com; connect-src 'self' https://script.google.com https://*.googleusercontent.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; connect-src 'self' https://script.google.com https://*.googleusercontent.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;">
   <title>Find Student - QR Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="api-config.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -29,7 +28,7 @@
         Unlock Portal
       </button>
     </div>
-    <p id="loginError" class="text-xs text-red-500 text-center hidden"></p>
+    <p id="loginError" class="text-xs text-red-500 text-center hidden pt-2"></p>
   </div>
 
   <!-- FIND SECTION -->
@@ -67,6 +66,41 @@
   </div>
 
   <script>
+    // --- API CONFIGURATION ---
+    const CFG_API_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const CFG_API_KEY = "SUPER_SECRET_API_KEY_12345";
+
+    async function hashPassword(password) {
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function sendSecureRequest(action, payload) {
+      try {
+        const response = await fetch(CFG_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ apiKey: CFG_API_KEY, action: action, payload: payload })
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        console.error("Network connection error:", error);
+        return { success: false, message: "Network connection error. Check your API URL." };
+      }
+    }
+
+    async function loginApi(username, password) {
+      const pHash = await hashPassword(password);
+      return sendSecureRequest('login', { username: username, passwordHash: pHash });
+    }
+
+    async function searchStudentsApi(query) {
+      return sendSecureRequest('searchStudents', { query: query });
+    }
+
+    // --- UI CONTROLLER ---
     window.addEventListener('DOMContentLoaded', () => {
       const sessionRole = sessionStorage.getItem('userRole');
       if (sessionRole) showAppUI(sessionRole);
