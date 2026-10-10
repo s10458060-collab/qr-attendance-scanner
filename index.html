@@ -6,7 +6,7 @@
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
-  <script src="api-config.js?v=104"></script>
+  <script src="api-config.js?v=200"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -50,7 +50,6 @@
     <div class="space-y-3">
       <div class="relative w-full aspect-square bg-black rounded-xl overflow-hidden flex items-center justify-center">
         <video id="qr-video" playsinline autoplay muted class="w-full h-full object-cover"></video>
-        <!-- Canvas made visible for real-time frame testing if needed -->
         <canvas id="canvas" class="hidden"></canvas>
       </div>
       <p id="cameraStatus" class="text-xs text-center text-slate-400">Requesting camera permissions...</p>
@@ -83,7 +82,7 @@
 
   <script>
     let videoStream = null;
-    let scanningActive = false;
+    let scanningInterval = null;
     let activeStudent = null;
     let studentCache = {};
     let isCacheLoaded = false;
@@ -93,57 +92,31 @@
       
       const name = String(className).toLowerCase().replace(/[^a-z0-9\+\-\s]/g, '').trim();
 
-      if (name.includes('1c') || name.includes('12+') || name.includes('part 1 c')) {
-        return '#000000'; // Black
-      } 
-      if (name.includes('part 1b') || name.includes('7+')) {
-        return '#ff69b4'; // Pink
-      } 
-      if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
-        return '#d93025'; // Red
-      } 
-      if (name.includes('below 4')) {
-        return '#1a73e8'; // Blue
-      } 
-      if (name.includes('part 2')) {
-        return '#ff8c00'; // Orange
-      } 
-      if (name.includes('part 3')) {
-        return '#800080'; // Purple
-      } 
-      if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
-        return '#0d652d'; // Green
-      } 
-      if (name.includes('part 6')) {
-        return '#fbbc04'; // Yellow
-      } 
-      if (name.includes('pronounciation') || name.includes('pronunciation')) {
-        return '#8b4513'; // Brown
-      }
+      if (name.includes('1c') || name.includes('12+') || name.includes('part 1 c')) return '#000000'; // Black
+      if (name.includes('part 1b') || name.includes('7+')) return '#ff69b4'; // Pink
+      if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) return '#d93025'; // Red
+      if (name.includes('below 4')) return '#1a73e8'; // Blue
+      if (name.includes('part 2')) return '#ff8c00'; // Orange
+      if (name.includes('part 3')) return '#800080'; // Purple
+      if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) return '#0d652d'; // Green
+      if (name.includes('part 6')) return '#fbbc04'; // Yellow
+      if (name.includes('pronounciation') || name.includes('pronunciation')) return '#8b4513'; // Brown
       
       return '#5f6368';
     }
 
     function hexToRgba(hex, alpha) {
       const cleanHex = (hex || '#5f6368').replace('#', '');
-      const r = parseInt(cleanHex.substring(0, 2), 16);
-      const g = parseInt(cleanHex.substring(2, 4), 16);
-      const b = parseInt(cleanHex.substring(4, 6), 16);
-      
-      const finalR = isNaN(r) ? 95 : r;
-      const finalG = isNaN(g) ? 99 : g;
-      const finalB = isNaN(b) ? 104 : b;
-      
-      return `rgba(${finalR}, ${finalG}, ${finalB}, ${alpha})`;
+      const r = parseInt(cleanHex.substring(0, 2), 16) || 95;
+      const g = parseInt(cleanHex.substring(2, 4), 16) || 99;
+      const b = parseInt(cleanHex.substring(4, 6), 16) || 104;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
       
     window.addEventListener('DOMContentLoaded', () => {
       preloadStudentRoster();
-
       const sessionRole = sessionStorage.getItem('userRole');
-      if (sessionRole) {
-        showAppUI(sessionRole);
-      }
+      if (sessionRole) showAppUI(sessionRole);
     });
 
     async function preloadStudentRoster() {
@@ -157,10 +130,10 @@
             studentCache[cleanId] = student;
           });
           isCacheLoaded = true;
-          document.getElementById('cameraStatus').innerText = "Scanning active (Instant Mode)";
+          document.getElementById('cameraStatus').innerText = "Camera scanning active";
         }
       } catch (e) {
-        document.getElementById('cameraStatus').innerText = "Scanning active...";
+        document.getElementById('cameraStatus').innerText = "Camera scanning active";
       }
     }
 
@@ -168,7 +141,6 @@
       const pwd = document.getElementById('loginPassword').value.trim();
       const errEl = document.getElementById('loginError');
       errEl.classList.add('hidden');
-
       if (!pwd) return;
 
       const res = await loginApi(pwd);
@@ -200,11 +172,7 @@
       
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
         });
       } catch (e) {
         try {
@@ -216,62 +184,52 @@
       }
 
       video.srcObject = videoStream;
-      video.setAttribute("playsinline", true);
+      video.play();
       
-      video.onloadedmetadata = () => {
-        video.play().then(() => {
-          scanningActive = true;
-          document.getElementById('cameraStatus').innerText = "Scanning active...";
-          requestAnimationFrame(scanFrame);
-        }).catch(err => {
-          console.error("Play error:", err);
-          document.getElementById('cameraStatus').innerText = "Tap screen to start camera";
-        });
-      };
+      // Check frames every 100ms using a stable interval loop
+      scanningInterval = setInterval(scanFrameTick, 100);
+      document.getElementById('cameraStatus').innerText = "Camera scanning active";
     }
 
     function stopCamera() {
-      scanningActive = false;
+      if (scanningInterval) {
+        clearInterval(scanningInterval);
+        scanningInterval = null;
+      }
       if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
       }
     }
 
-    function scanFrame() {
-      if (!scanningActive) return;
-      
+    function scanFrameTick() {
       const video = document.getElementById('qr-video');
       const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-        
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          
-          const code = jsQR(imageData.data, canvas.width, canvas.height, {
-            inversionAttempts: "attemptBoth"
-          });
-
-          if (code && code.data) {
-            console.log("QR Code detected:", code.data);
-            scanningActive = false;
-            fetchStudentFast(code.data.trim());
-            return;
-          }
-        } catch (e) {
-          // Ignore cross-origin frame noise
-        }
-      }
       
-      requestAnimationFrame(scanFrame);
+      if (!video || video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return;
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        const code = jsQR(imageData.data, canvas.width, canvas.height, {
+          inversionAttempts: "attemptBoth"
+        });
+
+        if (code && code.data) {
+          console.log("QR Code Scanned:", code.data);
+          stopCamera();
+          fetchStudentFast(code.data.trim());
+        }
+      } catch (err) {
+        // Suppress frame draw errors
+      }
     }
 
     async function fetchStudentFast(scannedId) {
@@ -290,7 +248,7 @@
         
         if (!res.success || !res.students || res.students.length === 0) {
           showAlert(res.message || "Student not found.", "red");
-          setTimeout(() => { scanningActive = true; scanFrame(); }, 1500);
+          setTimeout(() => { startCamera(); showAlert("", "hide"); }, 1800);
           return;
         }
 
@@ -298,8 +256,8 @@
         applyStudentCardTheme(activeStudent);
         showAlert("", "hide");
       } catch (err) {
-        showAlert("Connection error while fetching student details.", "red");
-        setTimeout(() => { scanningActive = true; scanFrame(); }, 1500);
+        showAlert("Connection error while searching.", "red");
+        setTimeout(() => { startCamera(); showAlert("", "hide"); }, 1800);
       }
     }
 
@@ -314,7 +272,6 @@
 
       const badge = document.getElementById('cardClassBadge');
       badge.innerText = className;
-      
       badge.style.setProperty('background-color', hexColor, 'important');
       badge.style.setProperty('color', hexColor === '#fbbc04' ? '#000000' : '#ffffff', 'important');
 
@@ -335,9 +292,8 @@
           document.getElementById('resultCard').classList.add('hidden');
           setTimeout(() => { 
             showAlert("", "hide");
-            scanningActive = true; 
-            scanFrame(); 
-          }, 400);
+            startCamera(); 
+          }, 800);
         }
       } catch (e) {
         showAlert("Failed to mark attendance", "red");
@@ -348,9 +304,7 @@
       activeStudent = null;
       document.getElementById('resultCard').classList.add('hidden');
       showAlert("", "hide");
-      scanningActive = true;
-      scanFrame();
-      document.getElementById('cameraStatus').innerText = "Scanning active...";
+      startCamera();
     }
 
     function showAlert(msg, type) {
