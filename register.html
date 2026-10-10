@@ -15,7 +15,6 @@
       <h1 class="text-2xl font-bold text-slate-800">System Login</h1>
       <p class="text-xs text-slate-500 mt-1">Authenticate to access Registration Portal</p>
     </div>
-
     <div class="space-y-3 pt-2">
       <div>
         <label class="block text-xs font-semibold text-slate-600 mb-1">Username</label>
@@ -90,7 +89,7 @@
         </div>
       </div>
 
-      <p class="text-[11px] text-slate-400 text-center italic mt-1">Unique Student ID (STU000) generated automatically.</p>
+      <p class="text-[11px] text-slate-400 text-center italic mt-1">Unique Student ID (STU000 format) generated automatically.</p>
 
       <button type="submit" id="btnRegister" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md text-sm mt-2">
         Register & Save to Sheet
@@ -103,9 +102,7 @@
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const sessionRole = sessionStorage.getItem('userRole');
-      if (sessionRole) {
-        showAppUI(sessionRole);
-      }
+      if (sessionRole) showAppUI(sessionRole);
     });
 
     async function handleLoginSubmit() {
@@ -115,7 +112,6 @@
       errEl.classList.add('hidden');
 
       if (!user || !pwd) return;
-
       const res = await loginApi(user, pwd);
       if (res.success) {
         sessionStorage.setItem('userRole', res.role);
@@ -181,7 +177,6 @@
         showAlert(res.message, res.success ? "green" : "red");
 
         if (res.success) {
-          sessionStorage.clear(); // Clear cached data
           document.getElementById('regForm').reset();
           await loadClassDropdown();
         }
