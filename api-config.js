@@ -33,3 +33,11 @@ async function registerStudentApi(studentData) {
 async function getValidClassesApi() {
   return sendSecureRequest('getClasses', {});
 }
+
+async function searchStudentsApi(query) {
+  return sendSecureRequest('searchStudents', { query: query });
+}
+
+async function recordAttendanceApi(studentId) {
+  return sendSecureRequest('recordAttendance', { studentId: studentId });
+}
