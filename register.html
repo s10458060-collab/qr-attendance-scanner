@@ -13,6 +13,8 @@
       --card-bg: #ffffff;
       --text-color: #202124;
       --border-color: #dadce0;
+      --secondary-bg: #f1f3f4;
+      --secondary-hover: #e8eaed;
     }
 
     body {
@@ -73,8 +75,6 @@
     button {
       width: 100%;
       padding: 12px;
-      background-color: var(--primary-color);
-      color: white;
       border: none;
       border-radius: 6px;
       font-size: 16px;
@@ -84,13 +84,27 @@
       margin-top: 10px;
     }
 
-    button:hover {
+    #submitBtn {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    #submitBtn:hover {
       background-color: #1557b0;
     }
 
-    button:disabled {
+    #submitBtn:disabled {
       background-color: var(--border-color);
       cursor: not-allowed;
+    }
+
+    #cancelBtn {
+      background-color: var(--secondary-bg);
+      color: var(--text-color);
+    }
+
+    #cancelBtn:hover {
+      background-color: var(--secondary-hover);
     }
 
     #message {
@@ -132,8 +146,8 @@
       </div>
 
       <div class="form-group">
-        <label for="className">Class *</label>
-        <select id="className" required>
+        <label for="classSelect">Class *</label>
+        <select id="classSelect" required>
           <option value="">Loading classes...</option>
         </select>
       </div>
@@ -159,6 +173,7 @@
       </div>
 
       <button type="submit" id="submitBtn">Register Student</button>
+      <button type="button" id="cancelBtn">Cancel / Back to Home</button>
     </form>
 
     <div id="message"></div>
@@ -171,8 +186,14 @@
 
     const form = document.getElementById('registrationForm');
     const submitBtn = document.getElementById('submitBtn');
-    const classSelect = document.getElementById('className');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const classSelect = document.getElementById('classSelect');
     const messageDiv = document.getElementById('message');
+
+    // Cancel Button navigation back to index.html
+    cancelBtn.addEventListener('click', function() {
+      window.location.href = 'index.html';
+    });
 
     // Fetch classes on page load to populate dropdown
     async function loadClasses() {
@@ -183,11 +204,10 @@
           body: JSON.stringify({ apiKey: API_KEY, action: 'getClasses' })
         });
         
-        // Note: Google Apps Script web apps redirect during CORS. If direct JSON parsing fails due to no-cors/redirects, 
-        // ensure you deploy as "Anyone" can access the web app.
         const result = await response.json();
         
         classSelect.innerHTML = '<option value="">Select a class...</option>';
+        
         if (result.success && result.classes.length > 0) {
           result.classes.forEach(cls => {
             const opt = document.createElement('option');
@@ -196,11 +216,10 @@
             classSelect.appendChild(opt);
           });
         } else {
-          classSelect.innerHTML = '<option value="">No classes found (Type manually or add tabs)</option>';
+          classSelect.innerHTML = '<option value="">No classes found in spreadsheet</option>';
         }
       } catch (err) {
-        // Fallback placeholder if cross-origin policy prevents direct fetch reading
-        classSelect.innerHTML = '<option value="">Standard Class</option>';
+        classSelect.innerHTML = '<option value="">Error loading classes</option>';
       }
     }
 
@@ -211,11 +230,16 @@
 
       const firstName = document.getElementById('firstName').value.trim();
       const lastName = document.getElementById('lastName').value.trim();
-      const className = document.getElementById('className').value.trim();
+      const className = classSelect.value;
       const dob = document.getElementById('dob').value;
       const parentName = document.getElementById('parentName').value.trim();
       const parentPhone = document.getElementById('parentPhone').value.trim();
       const parentEmail = document.getElementById('parentEmail').value.trim();
+
+      if (!className) {
+        showStatus("Please select a class.", "error");
+        return;
+      }
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Registering...";
@@ -244,7 +268,7 @@
 
         showStatus(`Successfully registered ${firstName} ${lastName} in ${className}! Student ID generated automatically.`, "success");
         form.reset();
-        loadClasses(); // Refresh dropdown
+        loadClasses();
       } catch (err) {
         showStatus("Registration Error: " + err.toString(), "error");
       } finally {
