@@ -65,7 +65,17 @@
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Class *</label>
-          <input type="text" id="regClass" required placeholder="e.g. Below 4, Part 1a" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+          <!-- Class Dropdown List -->
+          <select id="regClass" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+            <option value="" disabled selected>Select class...</option>
+            <option value="Below 4">Below 4</option>
+            <option value="Part 1a">Part 1a</option>
+            <option value="Part 1b">Part 1b</option>
+            <option value="Part 2">Part 2</option>
+            <option value="Part 3">Part 3</option>
+            <option value="Part 4">Part 4</option>
+            <option value="Part 6">Part 6</option>
+          </select>
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Date of Birth *</label>
@@ -133,7 +143,6 @@
     }
 
     function logout() {
-      clearCachedRoster();
       sessionStorage.clear();
       window.location.reload();
     }
@@ -148,7 +157,7 @@
       const studentData = {
         firstName: document.getElementById('regFirst').value.trim(),
         lastName: document.getElementById('regLast').value.trim(),
-        className: document.getElementById('regClass').value.trim(),
+        className: document.getElementById('regClass').value, // Gets selected dropdown value
         dob: document.getElementById('regDob').value,
         parentName: document.getElementById('regParentName').value.trim(),
         parentPhone: document.getElementById('regParentPhone').value.trim(),
@@ -160,7 +169,7 @@
         showAlert(res.message, res.success ? "green" : "red");
 
         if (res.success) {
-          clearCachedRoster(); // Invalidate local cache so new student shows up immediately
+          sessionStorage.removeItem('studentRosterData'); // Clear cache so new student appears immediately across pages
           document.getElementById('regForm').reset();
         }
       } catch (err) {
