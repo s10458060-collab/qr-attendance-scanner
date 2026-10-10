@@ -87,13 +87,17 @@
     let studentCache = {};
     let isCacheLoaded = false;
 
-    // Exact color mapping based on rules
+    // Robust color mapping with diagnostic logging
     function getClassColor(className) {
       if (!className) return '#5f6368';
       
-      const name = String(className).trim().toLowerCase();
+      // Diagnostic raw log
+      console.log("RAW className from sheet:", JSON.stringify(className));
+      
+      const name = String(className).toLowerCase().replace(/[^a-z0-9\+\-\s]/g, '').trim();
+      console.log("CLEANED className for matching:", name);
 
-      if (name.includes('part 1c') || name.includes('12+')) {
+      if (name.includes('1c') || name.includes('12+') || name.includes('part 1 c')) {
         return '#000000'; // Black
       } 
       if (name.includes('part 1b') || name.includes('7+')) {
@@ -283,7 +287,7 @@
       const className = student.className || student.class || 'Class';
       const hexColor = getClassColor(className);
 
-      console.log("Class:", className, "-> Hex Color:", hexColor);
+      console.log("Final Hex Color applied:", hexColor);
 
       document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
       document.getElementById('cardId').innerText = `ID: ${student.id}`;
@@ -292,7 +296,7 @@
       const badge = document.getElementById('cardClassBadge');
       badge.innerText = className;
       
-      // Force inline background and text colors to bypass Tailwind constraints
+      // Force inline styling to override any Tailwind defaults
       badge.style.setProperty('background-color', hexColor, 'important');
       badge.style.setProperty('color', hexColor === '#fbbc04' ? '#000000' : '#ffffff', 'important');
 
