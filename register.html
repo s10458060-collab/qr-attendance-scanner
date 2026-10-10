@@ -3,159 +3,262 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Registration - QR Attendance</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="api-config.js"></script>
+  <title>Student Registration Portal</title>
+  <style>
+    :root {
+      --primary-color: #1a73e8;
+      --success-color: #0d652d;
+      --error-color: #d93025;
+      --bg-color: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #202124;
+      --border-color: #dadce0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #1557b0;
+    }
+
+    button:disabled {
+      background-color: var(--border-color);
+      cursor: not-allowed;
+    }
+
+    #message {
+      margin-top: 16px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    .success {
+      background-color: #e6f4ea;
+      color: var(--success-color);
+      border: 1px solid #ceead6;
+    }
+
+    .error {
+      background-color: #fce8e6;
+      color: var(--error-color);
+      border: 1px solid #fad2cf;
+    }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
+<body>
 
-  <!-- LOGIN SECTION -->
-  <div id="loginCard" class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-4">
-    <div class="text-center">
-      <h1 class="text-2xl font-bold text-slate-800">System Login</h1>
-      <p class="text-xs text-slate-500 mt-1">Authenticate to access Attendance Portal</p>
-    </div>
-
-    <div class="space-y-3 pt-2">
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Passcode</label>
-        <input type="password" id="loginPassword" placeholder="Enter system password" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-      </div>
-      <button onclick="handleLoginSubmit()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
-        Unlock Portal
-      </button>
-    </div>
-    <p id="loginError" class="text-xs text-red-500 text-center hidden"></p>
-  </div>
-
-  <!-- MAIN APP SECTION -->
-  <div id="appSection" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4 my-2">
-    <div class="flex justify-between items-center border-b pb-3">
-      <div>
-        <h1 class="text-lg font-bold text-slate-800">Register Student</h1>
-        <p id="userRoleBadge" class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider"></p>
-      </div>
-      <button onclick="logout()" class="text-xs text-red-500 font-semibold hover:underline">Logout</button>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold text-center">
-      <a href="index.html" class="py-2.5 rounded-lg text-slate-600 hover:text-slate-900">Scan QR</a>
-      <a href="find.html" class="py-2.5 rounded-lg text-slate-600 hover:text-slate-900">Find Student</a>
-      <a href="register.html" class="py-2.5 rounded-lg text-white bg-indigo-600">New Reg</a>
-    </nav>
-
-    <!-- Registration Form -->
-    <form id="regForm" onsubmit="handleRegistration(event)" class="space-y-3">
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Student ID *</label>
-        <input type="text" id="regId" required placeholder="e.g. STU101" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono uppercase">
+  <div class="container">
+    <h2>Student Registration</h2>
+    <form id="registrationForm">
+      
+      <div class="form-group">
+        <label for="firstName">First Name *</label>
+        <input type="text" id="firstName" required placeholder="e.g., John">
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">First Name *</label>
-          <input type="text" id="regFirst" required placeholder="First name" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Last Name *</label>
-          <input type="text" id="regLast" required placeholder="Last name" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-        </div>
+      <div class="form-group">
+        <label for="lastName">Last Name *</label>
+        <input type="text" id="lastName" required placeholder="e.g., Smith">
       </div>
 
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Assign Class / Tab *</label>
-        <input type="text" id="regClass" required placeholder="e.g. Below 4, Part 1a, Part 2..." class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+      <div class="form-group">
+        <label for="className">Class *</label>
+        <select id="className" required>
+          <option value="">Loading classes...</option>
+        </select>
       </div>
 
-      <button type="submit" id="btnRegister" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md text-sm mt-2">
-        Register & Save to Sheet
-      </button>
+      <div class="form-group">
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob">
+      </div>
+
+      <div class="form-group">
+        <label for="parentName">Parent Name</label>
+        <input type="text" id="parentName" placeholder="e.g., Robert Smith">
+      </div>
+
+      <div class="form-group">
+        <label for="parentPhone">Parent Phone / WhatsApp</label>
+        <input type="tel" id="parentPhone" placeholder="e.g., +1234567890">
+      </div>
+
+      <div class="form-group">
+        <label for="parentEmail">Parent Email</label>
+        <input type="email" id="parentEmail" placeholder="e.g., parent@example.com">
+      </div>
+
+      <button type="submit" id="submitBtn">Register Student</button>
     </form>
 
-    <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
+    <div id="message"></div>
   </div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const sessionRole = sessionStorage.getItem('userRole');
-      if (sessionRole) {
-        showAppUI(sessionRole);
+    // CONFIGURATION: Replace with your deployed Google Apps Script Web App URL and API Key
+    const WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
+    const API_KEY = "SUPER_SECRET_API_KEY_12345";
+
+    const form = document.getElementById('registrationForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const classSelect = document.getElementById('className');
+    const messageDiv = document.getElementById('message');
+
+    // Fetch classes on page load to populate dropdown
+    async function loadClasses() {
+      try {
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ apiKey: API_KEY, action: 'getClasses' })
+        });
+        
+        // Note: Google Apps Script web apps redirect during CORS. If direct JSON parsing fails due to no-cors/redirects, 
+        // ensure you deploy as "Anyone" can access the web app.
+        const result = await response.json();
+        
+        classSelect.innerHTML = '<option value="">Select a class...</option>';
+        if (result.success && result.classes.length > 0) {
+          result.classes.forEach(cls => {
+            const opt = document.createElement('option');
+            opt.value = cls;
+            opt.textContent = cls;
+            classSelect.appendChild(opt);
+          });
+        } else {
+          classSelect.innerHTML = '<option value="">No classes found (Type manually or add tabs)</option>';
+        }
+      } catch (err) {
+        // Fallback placeholder if cross-origin policy prevents direct fetch reading
+        classSelect.innerHTML = '<option value="">Standard Class</option>';
       }
-    });
-
-    async function handleLoginSubmit() {
-      const pwd = document.getElementById('loginPassword').value.trim();
-      const errEl = document.getElementById('loginError');
-      errEl.classList.add('hidden');
-
-      if (!pwd) return;
-
-      const res = await loginApi(pwd);
-      if (res.success) {
-        sessionStorage.setItem('userRole', res.role);
-        showAppUI(res.role);
-      } else {
-        errEl.innerText = res.message || "Invalid Passcode";
-        errEl.classList.remove('hidden');
-      }
     }
 
-    function showAppUI(role) {
-      document.getElementById('loginCard').classList.add('hidden');
-      document.getElementById('appSection').classList.remove('hidden');
-      document.getElementById('userRoleBadge').innerText = `Session: ${role}`;
-    }
+    loadClasses();
 
-    function logout() {
-      sessionStorage.clear();
-      window.location.reload();
-    }
-
-    async function handleRegistration(e) {
+    form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      const btn = document.getElementById('btnRegister');
-      btn.disabled = true;
-      btn.innerText = "Registering...";
-      showAlert("Saving new student...", "blue");
 
-      const studentData = {
-        id: document.getElementById('regId').value.trim().toUpperCase(),
-        firstName: document.getElementById('regFirst').value.trim(),
-        lastName: document.getElementById('regLast').value.trim(),
-        className: document.getElementById('regClass').value.trim()
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const className = document.getElementById('className').value.trim();
+      const dob = document.getElementById('dob').value;
+      const parentName = document.getElementById('parentName').value.trim();
+      const parentPhone = document.getElementById('parentPhone').value.trim();
+      const parentEmail = document.getElementById('parentEmail').value.trim();
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Registering...";
+      messageDiv.style.display = 'none';
+
+      const payload = {
+        apiKey: API_KEY,
+        action: 'registerStudent',
+        data: {
+          firstName: firstName,
+          lastName: lastName,
+          className: className,
+          dob: dob,
+          parentName: parentName,
+          parentPhone: parentPhone,
+          parentEmail: parentEmail
+        }
       };
 
       try {
-        const res = await registerStudentApi(studentData);
-        showAlert(res.message, res.success ? "green" : "red");
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
 
-        if (res.success) {
-          document.getElementById('regForm').reset();
-        }
+        showStatus(`Successfully registered ${firstName} ${lastName} in ${className}! Student ID generated automatically.`, "success");
+        form.reset();
+        loadClasses(); // Refresh dropdown
       } catch (err) {
-        showAlert("Failed to connect to backend", "red");
+        showStatus("Registration Error: " + err.toString(), "error");
       } finally {
-        btn.disabled = false;
-        btn.innerText = "Register & Save to Sheet";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Register Student";
       }
-    }
+    });
 
-    function showAlert(msg, type) {
-      const banner = document.getElementById('alertBanner');
-      if (type === "hide") {
-        banner.classList.add('hidden');
-        return;
-      }
-
-      banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
-
-      if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
-      if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
-      if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
-
-      banner.innerText = msg;
+    function showStatus(text, type) {
+      messageDiv.textContent = text;
+      messageDiv.className = type;
+      messageDiv.style.display = 'block';
     }
   </script>
+
 </body>
 </html>
