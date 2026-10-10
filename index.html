@@ -6,7 +6,7 @@
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
-  <script src="api-config.js?v=101"></script>
+  <script src="api-config.js?v=102"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -244,20 +244,22 @@
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
 
-      // Use >= HAVE_CURRENT_DATA (2) instead of strict HAVE_ENOUGH_DATA (4) for mobile compatibility
       if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+        // Downscale frame to max 640px width for lightning-fast jsQR processing
+        const scale = Math.min(1, 640 / video.videoWidth);
+        const w = Math.floor(video.videoWidth * scale);
+        const h = Math.floor(video.videoHeight * scale);
+
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
         }
         
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, w, h);
         
         try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          
-          // Configure jsQR with inversionAttempts for maximum scan success rate
-          const code = jsQR(imageData.data, canvas.width, canvas.height, {
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const code = jsQR(imageData.data, w, h, {
             inversionAttempts: "attemptBoth"
           });
 
