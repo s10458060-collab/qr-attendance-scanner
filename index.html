@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scan QR - Attendance</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsQR@1.4.0/dist/jsQR.min.js"></script>
-  <script src="api-config.js?v=200"></script>
+  <!-- Use robust official html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="api-config.js?v=300"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
@@ -48,11 +49,9 @@
 
     <!-- Scan View Content -->
     <div class="space-y-3">
-      <div class="relative w-full aspect-square bg-black rounded-xl overflow-hidden flex items-center justify-center">
-        <video id="qr-video" playsinline autoplay muted class="w-full h-full object-cover"></video>
-        <canvas id="canvas" class="hidden"></canvas>
-      </div>
-      <p id="cameraStatus" class="text-xs text-center text-slate-400">Requesting camera permissions...</p>
+      <!-- html5-qrcode mounts its internal video reader right inside this container div -->
+      <div id="reader" class="w-full aspect-square bg-black rounded-xl overflow-hidden"></div>
+      <p id="cameraStatus" class="text-xs text-center text-slate-400">Initializing camera scanner...</p>
     </div>
 
     <!-- Student Details Result Card -->
@@ -81,8 +80,7 @@
   </div>
 
   <script>
-    let videoStream = null;
-    let scanningInterval = null;
+    let html5QrCode = null;
     let activeStudent = null;
     let studentCache = {};
     let isCacheLoaded = false;
@@ -130,10 +128,10 @@
             studentCache[cleanId] = student;
           });
           isCacheLoaded = true;
-          document.getElementById('cameraStatus').innerText = "Camera scanning active";
+          document.getElementById('cameraStatus').innerText = "Camera scanner ready";
         }
       } catch (e) {
-        document.getElementById('cameraStatus').innerText = "Camera scanning active";
+        document.getElementById('cameraStatus').innerText = "Camera scanner ready";
       }
     }
 
@@ -167,69 +165,52 @@
     }
 
     async function startCamera() {
-      stopCamera();
-      const video = document.getElementById('qr-video');
-      
-      try {
-        videoStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
-        });
-      } catch (e) {
-        try {
-          videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (err) {
-          document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
-          return;
-        }
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
       }
 
-      video.srcObject = videoStream;
-      video.play();
-      
-      // Check frames every 100ms using a stable interval loop
-      scanningInterval = setInterval(scanFrameTick, 100);
-      document.getElementById('cameraStatus').innerText = "Camera scanning active";
-    }
-
-    function stopCamera() {
-      if (scanningInterval) {
-        clearInterval(scanningInterval);
-        scanningInterval = null;
-      }
-      if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
-      }
-    }
-
-    function scanFrameTick() {
-      const video = document.getElementById('qr-video');
-      const canvas = document.getElementById('canvas');
-      
-      if (!video || video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return;
-
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
       try {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        const code = jsQR(imageData.data, canvas.width, canvas.height, {
-          inversionAttempts: "attemptBoth"
-        });
-
-        if (code && code.data) {
-          console.log("QR Code Scanned:", code.data);
-          stopCamera();
-          fetchStudentFast(code.data.trim());
-        }
+        await html5QrCode.start(
+          { facingMode: "environment" }, 
+          config, 
+          onScanSuccess, 
+          onScanFailure
+        );
+        document.getElementById('cameraStatus').innerText = "Scanning active...";
       } catch (err) {
-        // Suppress frame draw errors
+        console.error("Camera start error, falling back to any camera:", err);
+        try {
+          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanFailure);
+          document.getElementById('cameraStatus').innerText = "Scanning active...";
+        } catch (innerErr) {
+          document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
+        }
       }
+    }
+
+    async function stopCamera() {
+      if (html5QrCode && html5QrCode.isScanning) {
+        try {
+          await html5QrCode.stop();
+        } catch (e) {
+          console.error("Stop camera error:", e);
+        }
+      }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      console.log(`QR Code matched = ${decodedText}`, decodedResult);
+      
+      // Pause or stop scanning immediately upon successful match
+      html5QrCode.pause();
+      document.getElementById('cameraStatus').innerText = "QR Code detected!";
+      fetchStudentFast(decodedText.trim());
+    }
+
+    function onScanFailure(error) {
+      // Frame scan failures happen continuously while searching — suppress them silently
     }
 
     async function fetchStudentFast(scannedId) {
@@ -248,7 +229,11 @@
         
         if (!res.success || !res.students || res.students.length === 0) {
           showAlert(res.message || "Student not found.", "red");
-          setTimeout(() => { startCamera(); showAlert("", "hide"); }, 1800);
+          setTimeout(() => { 
+            html5QrCode.resume(); 
+            showAlert("", "hide"); 
+            document.getElementById('cameraStatus').innerText = "Scanning active...";
+          }, 2000);
           return;
         }
 
@@ -257,7 +242,11 @@
         showAlert("", "hide");
       } catch (err) {
         showAlert("Connection error while searching.", "red");
-        setTimeout(() => { startCamera(); showAlert("", "hide"); }, 1800);
+        setTimeout(() => { 
+          html5QrCode.resume(); 
+          showAlert("", "hide"); 
+          document.getElementById('cameraStatus').innerText = "Scanning active...";
+        }, 2000);
       }
     }
 
@@ -292,7 +281,8 @@
           document.getElementById('resultCard').classList.add('hidden');
           setTimeout(() => { 
             showAlert("", "hide");
-            startCamera(); 
+            html5QrCode.resume();
+            document.getElementById('cameraStatus').innerText = "Scanning active...";
           }, 800);
         }
       } catch (e) {
@@ -304,7 +294,8 @@
       activeStudent = null;
       document.getElementById('resultCard').classList.add('hidden');
       showAlert("", "hide");
-      startCamera();
+      if (html5QrCode) html5QrCode.resume();
+      document.getElementById('cameraStatus').innerText = "Scanning active...";
     }
 
     function showAlert(msg, type) {
