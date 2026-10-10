@@ -100,20 +100,41 @@
       window.location.reload();
     }
 
+    // Unified getClassColor matching your exact rules (with Part 1C -> Black)
     function getClassColor(className) {
-      if (!className) return '#3b82f6';
-      const str = String(className).toLowerCase().trim();
+      if (!className) return '#5f6368';
+      
+      const name = String(className).toLowerCase().replace(/[^a-z0-9\+\-\s]/g, '').trim();
 
-      if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6';
-      if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444';
-      if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899';
-      if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316';
-      if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6';
-      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981';
-      if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308';
-      if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e';
-
-      return '#3b82f6';
+      if (name.includes('1c') || name.includes('12+') || name.includes('part 1 c')) {
+        return '#000000'; // Black
+      } 
+      if (name.includes('part 1b') || name.includes('7+')) {
+        return '#ff69b4'; // Pink
+      } 
+      if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
+        return '#d93025'; // Red
+      } 
+      if (name.includes('below 4')) {
+        return '#1a73e8'; // Blue
+      } 
+      if (name.includes('part 2')) {
+        return '#ff8c00'; // Orange
+      } 
+      if (name.includes('part 3')) {
+        return '#800080'; // Purple
+      } 
+      if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
+        return '#0d652d'; // Green
+      } 
+      if (name.includes('part 6')) {
+        return '#fbbc04'; // Yellow
+      } 
+      if (name.includes('pronounciation') || name.includes('pronunciation')) {
+        return '#8b4513'; // Brown
+      }
+      
+      return '#5f6368';
     }
 
     async function loadStudentRoster() {
@@ -168,7 +189,7 @@
 
       div.innerHTML = `
         <div class="flex justify-between items-center">
-          <span class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm" style="background-color: ${hexColor}">${className}</span>
+          <span class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm" style="background-color: ${hexColor}; color: ${hexColor === '#fbbc04' ? '#000000' : '#ffffff'};">${className}</span>
           <span class="text-xs font-mono font-bold opacity-75">ID: ${student.id}</span>
         </div>
         <div>
@@ -199,11 +220,16 @@
     }
 
     function hexToRgba(hex, alpha) {
-      const cleanHex = hex.replace('#', '');
-      const r = parseInt(cleanHex.substring(0, 2), 16) || 59;
-      const g = parseInt(cleanHex.substring(2, 4), 16) || 130;
-      const b = parseInt(cleanHex.substring(4, 6), 16) || 246;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      const cleanHex = (hex || '#5f6368').replace('#', '');
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+      
+      const finalR = isNaN(r) ? 95 : r;
+      const finalG = isNaN(g) ? 99 : g;
+      const finalB = isNaN(b) ? 104 : b;
+      
+      return `rgba(${finalR}, ${finalG}, ${finalB}, ${alpha})`;
     }
 
     function showAlert(msg, type) {
