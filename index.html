@@ -89,22 +89,22 @@
 
     /**
      * Returns the exact color for a given class name based on your category rules.
-     * @param {string} className 
-     * @returns {string} Hex or color name
+     * Order of checks matters: specific classes (like Part 1C, Part 1B, Part 1A) 
+     * are evaluated before broader terms.
      */
     function getClassColor(className) {
       if (!className) return '#202124'; // Default text color
       
       const name = className.trim().toLowerCase();
 
-      if (name.includes('below 4')) {
-        return '#1a73e8'; // Blue
-      } else if (name.includes('part 1b') || (name.includes('7+'))) {
+      if (name.includes('part 1c') || name.includes('12+')) {
+        return '#000000'; // Black
+      } else if (name.includes('part 1b') || name.includes('7+')) {
         return '#ff69b4'; // Pink (Hot Pink)
       } else if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
         return '#d93025'; // Red
-      } else if (name.includes('part 1c') || name.includes('12+')) {
-        return '#000000'; // Black
+      } else if (name.includes('below 4')) {
+        return '#1a73e8'; // Blue
       } else if (name.includes('part 2')) {
         return '#ff8c00'; // Orange
       } else if (name.includes('part 3')) {
@@ -121,15 +121,14 @@
     }
       
     window.addEventListener('DOMContentLoaded', () => {
-  // Preload roster immediately in the background so it's ready instantly upon login
-  preloadStudentRoster();
+      preloadStudentRoster();
 
-  const sessionRole = sessionStorage.getItem('userRole');
-  if (sessionRole) {
-    showAppUI(sessionRole);
-  }
-});
-    
+      const sessionRole = sessionStorage.getItem('userRole');
+      if (sessionRole) {
+        showAppUI(sessionRole);
+      }
+    });
+
     async function preloadStudentRoster() {
       document.getElementById('cameraStatus').innerText = "Syncing student roster...";
       try {
@@ -170,7 +169,6 @@
       document.getElementById('appSection').classList.remove('hidden');
       document.getElementById('userRoleBadge').innerText = `Session: ${role}`;
       startCamera();
-      preloadStudentRoster();
     }
 
     function logout() {
@@ -210,39 +208,31 @@
       }
     }
 
-  let frameCount = 0;
+    // Restored full-speed frame loop so QR codes scan instantly again
+    function scanFrame() {
+      if (!scanningActive) return;
+      
+      const video = document.getElementById('qr-video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
 
-  function scanFrame() {
-  if (!scanningActive) return;
-  
-  frameCount++;
-  // Throttle to process every 3rd frame (~20fps), drastically reducing CPU load on phones
-  if (frameCount % 3 !== 0) {
-    requestAnimationFrame(scanFrame);
-    return;
-  }
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
 
-  const video = document.getElementById('qr-video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
-    canvas.height = video.videoHeight;
-    canvas.width = video.videoWidth;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-    if (code && code.data) {
-      scanningActive = false;
-      fetchStudentFast(code.data.trim());
-      return;
+        if (code && code.data) {
+          scanningActive = false;
+          fetchStudentFast(code.data.trim());
+          return;
+        }
+      }
+      requestAnimationFrame(scanFrame);
     }
-  }
-  requestAnimationFrame(scanFrame);
-}
-    
+
     async function fetchStudentFast(scannedId) {
       const cleanId = String(scannedId).trim().toUpperCase();
 
@@ -312,7 +302,7 @@
             showAlert("", "hide");
             scanningActive = true; 
             scanFrame(); 
-          }, 1000);
+          }, 400);
         }
       } catch (e) {
         showAlert("Failed to mark attendance", "red");
@@ -344,5 +334,6 @@
       banner.innerText = msg;
     }
   </script>
-</body>
+  
+  </body>
 </html>
