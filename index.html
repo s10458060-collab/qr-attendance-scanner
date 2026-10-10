@@ -87,37 +87,42 @@
     let studentCache = {};
     let isCacheLoaded = false;
 
-    /**
-     * Returns the exact color for a given class name based on your category rules.
-     * Order of checks matters: specific classes (like Part 1C, Part 1B, Part 1A) 
-     * are evaluated before broader terms.
-     */
     function getClassColor(className) {
-      if (!className) return '#202124'; // Default text color
+      if (!className) return '#202124';
       
-      const name = className.trim().toLowerCase();
+      const name = String(className).trim().toLowerCase();
+      console.log("Evaluating class color for:", name); // Check F12 Console to see exact string
 
+      // Exact or substring checks in precise order from most specific to general
       if (name.includes('part 1c') || name.includes('12+')) {
         return '#000000'; // Black
-      } else if (name.includes('part 1b') || name.includes('7+')) {
-        return '#ff69b4'; // Pink (Hot Pink)
-      } else if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
+      } 
+      if (name.includes('part 1b') || name.includes('7+')) {
+        return '#ff69b4'; // Pink
+      } 
+      if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
         return '#d93025'; // Red
-      } else if (name.includes('below 4')) {
+      } 
+      if (name.includes('below 4')) {
         return '#1a73e8'; // Blue
-      } else if (name.includes('part 2')) {
+      } 
+      if (name.includes('part 2')) {
         return '#ff8c00'; // Orange
-      } else if (name.includes('part 3')) {
+      } 
+      if (name.includes('part 3')) {
         return '#800080'; // Purple
-      } else if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
+      } 
+      if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
         return '#0d652d'; // Green
-      } else if (name.includes('part 6')) {
-        return '#fbbc04'; // Yellow (Gold/Yellow)
-      } else if (name.includes('pronounciation') || name.includes('pronunciation')) {
-        return '#8b4513'; // Brown (SaddleBrown)
+      } 
+      if (name.includes('part 6')) {
+        return '#fbbc04'; // Yellow
+      } 
+      if (name.includes('pronounciation') || name.includes('pronunciation')) {
+        return '#8b4513'; // Brown
       }
       
-      return '#5f6368'; // Default fallback gray if no match
+      return '#5f6368'; // Fallback gray
     }
       
     window.addEventListener('DOMContentLoaded', () => {
