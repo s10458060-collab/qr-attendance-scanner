@@ -87,21 +87,38 @@
     let studentCache = {};
     let isCacheLoaded = false;
 
-    function getClassColor(className) {
-      if (!className) return '#3b82f6';
-      const str = String(className).toLowerCase().trim();
+    /**
+ * Returns the exact color for a given class name based on your category rules.
+ * @param {string} className 
+ * @returns {string} Hex or color name
+ */
+function getClassColor(className) {
+  if (!className) return '#202124'; // Default text color
+  
+  const name = className.trim().toLowerCase();
 
-      if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6';
-      if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444';
-      if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899';
-      if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316';
-      if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6';
-      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981';
-      if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308';
-      if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e';
-
-      return '#3b82f6';
-    }
+  if (name.includes('below 4')) {
+    return '#1a73e8'; // Blue
+  } else if (name.includes('part 1b') || (name.includes('7+'))) {
+    return '#ff69b4'; // Pink (Hot Pink)
+  } else if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
+    return '#d93025'; // Red
+  } else if (name.includes('part 1c') || name.includes('12+')) {
+    return '#000000'; // Black
+  } else if (name.includes('part 2')) {
+    return '#ff8c00'; // Orange
+  } else if (name.includes('part 3')) {
+    return '#800080'; // Purple
+  } else if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
+    return '#0d652d'; // Green
+  } else if (name.includes('part 6')) {
+    return '#fbbc04'; // Yellow (Gold/Yellow)
+  } else if (name.includes('pronounciation') || name.includes('pronunciation')) {
+    return '#8b4513'; // Brown (SaddleBrown)
+  }
+  
+  return '#5f6368'; // Default fallback gray if no match
+}
 
     window.addEventListener('DOMContentLoaded', () => {
       const sessionRole = sessionStorage.getItem('userRole');
