@@ -87,43 +87,46 @@
     let studentCache = {};
     let isCacheLoaded = false;
 
-    function getClassColor(className) {
-      if (!className) return '#202124';
-      
-      const name = String(className).trim().toLowerCase();
-      console.log("Evaluating class color for:", name); // Check F12 Console to see exact string
+    /**
+ * Returns the exact color for a given class name based on your category rules.
+ * @param {string} className 
+ * @returns {string} Hex color code
+ */
+function getClassColor(className) {
+  if (!className) return '#5f6368'; // Default gray if empty
+  
+  const name = String(className).trim().toLowerCase();
 
-      // Exact or substring checks in precise order from most specific to general
-      if (name.includes('part 1c') || name.includes('12+')) {
-        return '#000000'; // Black
-      } 
-      if (name.includes('part 1b') || name.includes('7+')) {
-        return '#ff69b4'; // Pink
-      } 
-      if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
-        return '#d93025'; // Red
-      } 
-      if (name.includes('below 4')) {
-        return '#1a73e8'; // Blue
-      } 
-      if (name.includes('part 2')) {
-        return '#ff8c00'; // Orange
-      } 
-      if (name.includes('part 3')) {
-        return '#800080'; // Purple
-      } 
-      if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
-        return '#0d652d'; // Green
-      } 
-      if (name.includes('part 6')) {
-        return '#fbbc04'; // Yellow
-      } 
-      if (name.includes('pronounciation') || name.includes('pronunciation')) {
-        return '#8b4513'; // Brown
-      }
-      
-      return '#5f6368'; // Fallback gray
-    }
+  if (name.includes('part 1c') || name.includes('12+')) {
+    return '#000000'; // Black
+  } 
+  if (name.includes('part 1b') || name.includes('7+')) {
+    return '#ff69b4'; // Pink
+  } 
+  if (name.includes('part 1a') || name.includes('4-6') || name.includes('4 - 6')) {
+    return '#d93025'; // Red
+  } 
+  if (name.includes('below 4')) {
+    return '#1a73e8'; // Blue
+  } 
+  if (name.includes('part 2')) {
+    return '#ff8c00'; // Orange
+  } 
+  if (name.includes('part 3')) {
+    return '#800080'; // Purple
+  } 
+  if (name.includes('part 4') || name.includes('part 5') || name.includes('4-5') || name.includes('4 - 5')) {
+    return '#0d652d'; // Green
+  } 
+  if (name.includes('part 6')) {
+    return '#fbbc04'; // Yellow
+  } 
+  if (name.includes('pronounciation') || name.includes('pronunciation')) {
+    return '#8b4513'; // Brown
+  }
+  
+  return '#5f6368'; // Fallback gray if no match
+}
       
     window.addEventListener('DOMContentLoaded', () => {
       preloadStudentRoster();
