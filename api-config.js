@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSAANSXcqbl6-VVhIWgxCyDFs9qhW-tgrshbOSjV25qNLoD9colFOTs3Bi9EMKdnO1/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8Ejy5TwVf8-w4OIJhyQwxhxvW2e4yWtXWQQl7IU1ThXB3dPHftPjyUdCbs5NTr23R/exec";
 const API_KEY = "SUPER_SECRET_API_KEY_12345"; // Must match Code.gs API_KEY
 
 async function hashPassword(password) {
